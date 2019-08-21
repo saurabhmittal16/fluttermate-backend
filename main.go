@@ -16,6 +16,8 @@ var fsClient *firestore.Client
 var authClient *auth.Client
 var err error
 
+type authHandler func(http.ResponseWriter, *http.Request, tokenData)
+
 type text struct {
 	Message string `json:"message"`
 }
@@ -25,7 +27,7 @@ type tokenData struct {
 	email string
 }
 
-func checkAuth(f http.HandlerFunc) http.HandlerFunc {
+func checkAuth(f authHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		data, err := authClient.VerifyIDToken(context.Background(), token)
@@ -38,8 +40,7 @@ func checkAuth(f http.HandlerFunc) http.HandlerFunc {
 			ghID:  temp["github.com"].([]interface{})[0].(string),
 			email: temp["email"].([]interface{})[0].(string),
 		}
-		fmt.Println(user)
-		f(w, r)
+		f(w, r, user)
 	}
 }
 
@@ -50,9 +51,9 @@ func welcomeResponse(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func profileResponse(w http.ResponseWriter, r *http.Request) {
+func profileResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	jsonResponse(w, r, text{
-		Message: "Hello, World!",
+		Message: fmt.Sprintf("Hello, %s!", user.email),
 	})
 }
 
