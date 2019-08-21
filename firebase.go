@@ -36,3 +36,9 @@ func userExists(uid string) bool {
 
 	return dsnap.Exists()
 }
+
+// create user
+func createUser(uid string, v interface{}) error {
+	_, err := fsClient.Collection("users").Doc(uid).Set(context.Background(), v)
+	return err
+}
