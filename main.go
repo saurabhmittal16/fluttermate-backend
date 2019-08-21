@@ -8,14 +8,29 @@ import (
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
+	"firebase.google.com/go/auth"
 )
 
 var app *firebase.App
-var client *firestore.Client
+var fsClient *firestore.Client
+var authClient *auth.Client
 var err error
 
 type text struct {
 	Message string `json:"message"`
+}
+
+func checkAuth(f http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("Authorization")
+		data, err := authClient.VerifyIDToken(context.Background(), token)
+		if err != nil {
+			// ToDo: Handle this gracefully
+			log.Fatalf("Could not verify token: %v\n", err)
+		}
+		fmt.Printf("Values are %+v\n", data.Claims["firebase"])
+		f(w, r)
+	}
 }
 
 // welcomeResponse handles requests to root
@@ -25,22 +40,33 @@ func welcomeResponse(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func profileResponse(w http.ResponseWriter, r *http.Request) {
+	jsonResponse(w, r, text{
+		Message: "Hello, World!",
+	})
+}
+
 func init() {
 	app = initializeAppWithServiceAccount()
 }
 
 func main() {
 	// Open connection to Firestore
-	client, err = app.Firestore(context.Background())
+	fsClient, err = app.Firestore(context.Background())
 	if err != nil {
-		log.Fatal("Failed to intialise Firestore", err)
+		log.Fatalf("Failed to intialise Firestore: %v\n", err)
 	}
-	defer client.Close()
+	defer fsClient.Close()
 
-	readUserData()
+	// Create auth client
+	authClient, err = app.Auth(context.Background())
+	if err != nil {
+		log.Fatalf("Error getting Auth client: %v\n", err)
+	}
 
 	// Register routes
 	http.HandleFunc("/", welcomeResponse)
+	http.HandleFunc("/me", checkAuth(profileResponse))
 
 	// Start the server and log errors
 	fmt.Println("Server running at port 3000")

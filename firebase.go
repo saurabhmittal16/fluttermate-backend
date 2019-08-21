@@ -10,7 +10,7 @@ import (
 
 // read user data
 func readUserData() {
-	iter := client.Collection("users").Documents(context.Background())
+	iter := fsClient.Collection("users").Documents(context.Background())
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
