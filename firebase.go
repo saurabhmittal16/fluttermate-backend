@@ -25,3 +25,14 @@ func readUserData() {
 		fmt.Println()
 	}
 }
+
+// find if user exists
+func userExists(uid string) bool {
+	dsnap, err := fsClient.Collection("users").Doc(uid).Get(context.Background())
+	if err != nil {
+		fmt.Println("Checking of document failed", err)
+		return false
+	}
+
+	return dsnap.Exists()
+}

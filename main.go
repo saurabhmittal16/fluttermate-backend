@@ -19,12 +19,32 @@ var err error
 type authHandler func(http.ResponseWriter, *http.Request, tokenData)
 
 type text struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+type authMessage struct {
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
 type tokenData struct {
+	uid   string
 	ghID  string
 	email string
+}
+
+type user struct {
+	name      string
+	picture   string
+	email     string
+	username  string
+	location  string
+	bio       string
+	repos     int
+	followers int
+	following int
+	github    string
 }
 
 func checkAuth(f authHandler) http.HandlerFunc {
@@ -32,14 +52,17 @@ func checkAuth(f authHandler) http.HandlerFunc {
 		token := r.Header.Get("Authorization")
 		data, err := authClient.VerifyIDToken(context.Background(), token)
 		if err != nil {
-			// ToDo: Handle this gracefully
-			log.Fatalf("Could not verify token: %v\n", err)
+			fmt.Printf("Could not verify token: %v\n", err)
+			http.Error(w, "Could not verify token", http.StatusInternalServerError)
+			return
 		}
 		temp := data.Claims["firebase"].(map[string]interface{})["identities"].(map[string]interface{})
 		user := tokenData{
+			uid:   data.UID,
 			ghID:  temp["github.com"].([]interface{})[0].(string),
 			email: temp["email"].([]interface{})[0].(string),
 		}
+		fmt.Println(user)
 		f(w, r, user)
 	}
 }
@@ -55,6 +78,32 @@ func profileResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	jsonResponse(w, r, text{
 		Message: fmt.Sprintf("Hello, %s!", user.email),
 	})
+}
+
+func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
+	if userExists(user.uid) {
+		fmt.Println("User exists, login successful")
+		jsonResponse(w, r, authMessage{
+			Code:    1,
+			Message: "Login successful",
+		})
+	} else {
+		jsonResponse(w, r, authMessage{
+			Code:    2,
+			Message: "Signup successful",
+		})
+	}
+
+	_, err := http.Get("https://api.github.com/user/" + user.ghID)
+	if err != nil {
+		http.Error(w, "Failed to fetch data from Github API", http.StatusInternalServerError)
+		return
+	}
 }
 
 func init() {
@@ -78,6 +127,7 @@ func main() {
 	// Register routes
 	http.HandleFunc("/", welcomeResponse)
 	http.HandleFunc("/me", checkAuth(profileResponse))
+	http.HandleFunc("/signup", checkAuth(signupResponse))
 
 	// Start the server and log errors
 	fmt.Println("Server running at port 3000")
