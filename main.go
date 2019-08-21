@@ -20,6 +20,11 @@ type text struct {
 	Message string `json:"message"`
 }
 
+type tokenData struct {
+	ghID  string
+	email string
+}
+
 func checkAuth(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
@@ -28,7 +33,12 @@ func checkAuth(f http.HandlerFunc) http.HandlerFunc {
 			// ToDo: Handle this gracefully
 			log.Fatalf("Could not verify token: %v\n", err)
 		}
-		fmt.Printf("Values are %+v\n", data.Claims["firebase"])
+		temp := data.Claims["firebase"].(map[string]interface{})["identities"].(map[string]interface{})
+		user := tokenData{
+			ghID:  temp["github.com"].([]interface{})[0].(string),
+			email: temp["email"].([]interface{})[0].(string),
+		}
+		fmt.Println(user)
 		f(w, r)
 	}
 }
