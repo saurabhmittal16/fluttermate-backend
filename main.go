@@ -53,11 +53,8 @@ func checkAuth(f authHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		data, err := authClient.VerifyIDToken(context.Background(), token)
-		if err != nil {
-			fmt.Printf("Could not verify token: %v\n", err)
-			http.Error(w, "Could not verify token", http.StatusInternalServerError)
-			return
-		}
+		checkHTTPError(w, err, "Could not verify token", http.StatusInternalServerError)
+
 		temp := data.Claims["firebase"].(map[string]interface{})["identities"].(map[string]interface{})
 		user := tokenData{
 			uid:   data.UID,
@@ -82,7 +79,6 @@ func profileResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	})
 }
 
-// ToDo: Extract error handling to seperate function
 func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -99,28 +95,17 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	} else {
 		// get user info from Github API
 		profile, err := http.Get("https://api.github.com/user/" + user.ghID)
-		if err != nil {
-			http.Error(w, "Failed to fetch data from Github API", http.StatusInternalServerError)
-			return
-		}
+		checkHTTPError(w, err, "Failed to fetch data from Github API", http.StatusInternalServerError)
 
 		// decode user from API response
 		var newUser firebaseUser
 		err = json.NewDecoder(profile.Body).Decode(&newUser)
-		if err != nil {
-			fmt.Println("Error while decoding API response", err)
-			http.Error(w, "Error while decoding API response", http.StatusInternalServerError)
-			return
-		}
+		checkHTTPError(w, err, "Error while decoding API response", http.StatusInternalServerError)
 
 		// save user to Firestore
 		fmt.Printf("User is %+v\n", newUser)
 		err = createUser(user.uid, newUser)
-		if err != nil {
-			fmt.Println("Error while decoding API response", err)
-			http.Error(w, "Error while decoding API response", http.StatusInternalServerError)
-			return
-		}
+		checkHTTPError(w, err, "Error while decoding API response", http.StatusInternalServerError)
 
 		// respond with signup successful
 		jsonResponse(w, r, authMessage{

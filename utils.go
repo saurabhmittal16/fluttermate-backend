@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -25,4 +26,13 @@ func initializeAppWithServiceAccount() *firebase.App {
 func jsonResponse(w http.ResponseWriter, r *http.Request, v interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(v)
+}
+
+// checkHTTPError logs and returns the error
+func checkHTTPError(w http.ResponseWriter, err error, message string, code int) {
+	if err != nil {
+		fmt.Println(message, err)
+		http.Error(w, message, code)
+		return
+	}
 }
