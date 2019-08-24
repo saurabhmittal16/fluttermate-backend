@@ -6,8 +6,12 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/saurabhmittal16/fluttermate/creds"
 	"github.com/saurabhmittal16/fluttermate/firebase"
 )
+
+var clientSecret string
+var clientID string
 
 type authHandler func(http.ResponseWriter, *http.Request, tokenData)
 
@@ -38,6 +42,10 @@ type firebaseUser struct {
 	Followers int    `json:"followers" firestore:"followers"`
 	Following int    `json:"following" firestore:"following"`
 	Github    int    `json:"id" firestore:"github"`
+}
+
+func getURL(id string) string {
+	return fmt.Sprintf("https://api.github.com/user/%s?client_id=%s&client_secret=%s", id, clientID, clientSecret)
 }
 
 func checkAuth(f authHandler) http.HandlerFunc {
@@ -81,9 +89,8 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 		checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
 
 	} else {
-		fmt.Println("Signing up user")
 		// get user info from Github API
-		profile, err := http.Get("https://api.github.com/user/" + user.ghID)
+		profile, err := http.Get(getURL(user.ghID))
 		checkHTTPError(w, err, "Failed to fetch data from Github API", http.StatusInternalServerError)
 
 		// decode user from API response
@@ -104,6 +111,17 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 		})
 		checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
 	}
+}
+
+func init() {
+	/*
+		pass path of JSON file containing Github app credentials of form-
+		{
+			"client_id": "xxxxx",
+			"client_secret": "yyyyy"
+		}
+	*/
+	clientID, clientSecret = creds.GetClientCreds("./github.json")
 }
 
 func main() {

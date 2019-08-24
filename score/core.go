@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/saurabhmittal16/fluttermate/creds"
 )
+
+var clientSecret string
+var clientID string
 
 type language struct {
 	Dart int `json:"Dart"`
@@ -23,13 +28,21 @@ type repos []repo
 
 func must(err error) {
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Here", err)
 		return
 	}
 }
 
 func getURL(id string) string {
-	return fmt.Sprintf("https://api.github.com/user/%s/repos", id)
+	return fmt.Sprintf("https://api.github.com/user/%s/repos?client_id=%s&client_secret=%s", id, clientID, clientSecret)
+}
+
+func getLanguageURL(url string) string {
+	return fmt.Sprintf("%s?client_id=%s&client_secret=%s", url, clientID, clientSecret)
+}
+
+func init() {
+	clientID, clientSecret = creds.GetClientCreds("../github.json")
 }
 
 // GetScore takes GitHub User ID as input
@@ -60,7 +73,7 @@ func GetScore(id string) (float64, error) {
 
 		go func(url string) {
 			var temp language
-			resp, err := http.Get(url)
+			resp, err := http.Get(getLanguageURL(url))
 			must(err)
 
 			err = json.NewDecoder(resp.Body).Decode(&temp)
