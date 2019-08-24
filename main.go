@@ -35,7 +35,6 @@ type tokenData struct {
 	email string
 }
 
-// ToDo: Set email from token and store GitHub ID as string in Firestore
 type firebaseUser struct {
 	Name      string `json:"name" firestore:"name"`
 	Picture   string `json:"avatar_url" firestore:"picture"`
@@ -73,12 +72,6 @@ func welcomeResponse(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func profileResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
-	jsonResponse(w, r, text{
-		Message: fmt.Sprintf("Hello, %s!", user.email),
-	})
-}
-
 func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Not found", http.StatusNotFound)
@@ -101,6 +94,7 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 		var newUser firebaseUser
 		err = json.NewDecoder(profile.Body).Decode(&newUser)
 		checkHTTPError(w, err, "Error while decoding API response", http.StatusInternalServerError)
+		newUser.Email = user.email
 
 		// save user to Firestore
 		fmt.Printf("User is %+v\n", newUser)
@@ -135,7 +129,6 @@ func main() {
 
 	// Register routes
 	http.HandleFunc("/", welcomeResponse)
-	http.HandleFunc("/me", checkAuth(profileResponse))
 	http.HandleFunc("/signup", checkAuth(signupResponse))
 
 	// Start the server and log errors
