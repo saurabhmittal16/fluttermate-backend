@@ -23,9 +23,10 @@ func initializeAppWithServiceAccount() *firebase.App {
 }
 
 // jsonResponse generates JSON Response from given interface
-func jsonResponse(w http.ResponseWriter, r *http.Request, v interface{}) {
+func jsonResponse(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	json.NewEncoder(w).Encode(v)
+	err := json.NewEncoder(w).Encode(v)
+	return err
 }
 
 // checkHTTPError logs and returns the error

@@ -67,9 +67,10 @@ func checkAuth(f authHandler) http.HandlerFunc {
 
 // welcomeResponse handles requests to root
 func welcomeResponse(w http.ResponseWriter, r *http.Request) {
-	jsonResponse(w, r, text{
+	err = jsonResponse(w, r, text{
 		Message: "Welcome to FlutterMate",
 	})
+	checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
 }
 
 func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
@@ -81,10 +82,12 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	// if user already exists, respond with login successful
 	if userExists(user.uid) {
 		fmt.Println("User exists, login successful")
-		jsonResponse(w, r, authMessage{
+		err = jsonResponse(w, r, authMessage{
 			Code:    1,
 			Message: "Login successful",
 		})
+		checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
+
 	} else {
 		// get user info from Github API
 		profile, err := http.Get("https://api.github.com/user/" + user.ghID)
