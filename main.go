@@ -1,21 +1,13 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
-	"cloud.google.com/go/firestore"
-	firebase "firebase.google.com/go"
-	"firebase.google.com/go/auth"
+	"github.com/saurabhmittal16/fluttermate/firebase"
 )
-
-var app *firebase.App
-var fsClient *firestore.Client
-var authClient *auth.Client
-var err error
 
 type authHandler func(http.ResponseWriter, *http.Request, tokenData)
 
@@ -51,7 +43,7 @@ type firebaseUser struct {
 func checkAuth(f authHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
-		data, err := authClient.VerifyIDToken(context.Background(), token)
+		data, err := firebase.VerifyToken(token)
 		checkHTTPError(w, err, "Could not verify token", http.StatusInternalServerError)
 
 		temp := data.Claims["firebase"].(map[string]interface{})["identities"].(map[string]interface{})
@@ -67,7 +59,7 @@ func checkAuth(f authHandler) http.HandlerFunc {
 
 // welcomeResponse handles requests to root
 func welcomeResponse(w http.ResponseWriter, r *http.Request) {
-	err = jsonResponse(w, r, text{
+	err := jsonResponse(w, r, text{
 		Message: "Welcome to FlutterMate",
 	})
 	checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
@@ -80,15 +72,16 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 	}
 
 	// if user already exists, respond with login successful
-	if userExists(user.uid) {
+	if firebase.DocExists(user.uid, "users") {
 		fmt.Println("User exists, login successful")
-		err = jsonResponse(w, r, authMessage{
+		err := jsonResponse(w, r, authMessage{
 			Code:    1,
 			Message: "Login successful",
 		})
 		checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
 
 	} else {
+		fmt.Println("Signing up user")
 		// get user info from Github API
 		profile, err := http.Get("https://api.github.com/user/" + user.ghID)
 		checkHTTPError(w, err, "Failed to fetch data from Github API", http.StatusInternalServerError)
@@ -101,35 +94,19 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 
 		// save user to Firestore
 		fmt.Printf("User is %+v\n", newUser)
-		err = createUser(user.uid, newUser)
+		err = firebase.CreateUser(user.uid, "users", newUser)
 		checkHTTPError(w, err, "Error while decoding API response", http.StatusInternalServerError)
 
 		// respond with signup successful
-		jsonResponse(w, r, authMessage{
+		err = jsonResponse(w, r, authMessage{
 			Code:    2,
 			Message: "Signup successful",
 		})
+		checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
 	}
-}
-
-func init() {
-	app = initializeAppWithServiceAccount()
 }
 
 func main() {
-	// Open connection to Firestore
-	fsClient, err = app.Firestore(context.Background())
-	if err != nil {
-		log.Fatalf("Failed to intialise Firestore: %v\n", err)
-	}
-	defer fsClient.Close()
-
-	// Create auth client
-	authClient, err = app.Auth(context.Background())
-	if err != nil {
-		log.Fatalf("Error getting Auth client: %v\n", err)
-	}
-
 	// Register routes
 	http.HandleFunc("/", welcomeResponse)
 	http.HandleFunc("/signup", checkAuth(signupResponse))
