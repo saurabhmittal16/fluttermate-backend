@@ -39,7 +39,7 @@ func seedData(users []tokenData) {
 		err = json.NewDecoder(profile.Body).Decode(&newUser)
 		newUser.Email = user.email
 		if err == nil {
-			fmt.Println("Data decoded successfuly", newUser)
+			fmt.Println("Data decoded successfuly")
 		}
 
 		// save user to Firestore

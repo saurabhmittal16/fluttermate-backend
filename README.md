@@ -8,4 +8,6 @@ The backend for FlutterMate recreated using Golang
 - [X] Add Firebase
 - [X] Create authentication middleware
 - [X] Signup new users
-- [ ] Get user Github repositories and calculate score
+- [X] Get user Github repositories and calculate score
+- [ ] Improve Flutter score algorithm
+- [ ] Find suitable teammate using Flutter score
