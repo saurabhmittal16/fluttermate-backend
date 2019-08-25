@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/saurabhmittal16/fluttermate/creds"
 	"github.com/saurabhmittal16/fluttermate/firebase"
+	"github.com/saurabhmittal16/fluttermate/score"
 )
 
 var clientSecret string
@@ -100,9 +102,9 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 		newUser.Email = user.email
 
 		// save user to Firestore
-		fmt.Printf("User is %+v\n", newUser)
 		err = firebase.CreateUser(user.uid, "users", newUser)
 		checkHTTPError(w, err, "Error while decoding API response", http.StatusInternalServerError)
+		fmt.Println("User created successfuly")
 
 		// respond with signup successful
 		err = jsonResponse(w, r, authMessage{
@@ -110,6 +112,23 @@ func signupResponse(w http.ResponseWriter, r *http.Request, user tokenData) {
 			Message: "Signup successful",
 		})
 		checkHTTPError(w, err, "Could not generate JSON Response", http.StatusInternalServerError)
+
+		// create go routine that calculates score and updates to firestore
+		go func(ghID string, docID string) {
+			start := time.Now()
+			score, err := score.GetScore(ghID)
+			if err != nil {
+				fmt.Printf("Could not calculate score: %v\n", err)
+				return
+			}
+
+			err = firebase.UpdateScore(docID, "users", score)
+			if err != nil {
+				fmt.Printf("Could not calculate score: %v\n", err)
+				return
+			}
+			fmt.Printf("Score of user %s is %v, updated successfuly in %v\n", docID, score, time.Now().Sub(start))
+		}(user.ghID, user.uid)
 	}
 }
 

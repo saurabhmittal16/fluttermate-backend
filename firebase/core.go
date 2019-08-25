@@ -77,3 +77,12 @@ func CreateUser(uid string, collection string, v interface{}) error {
 	_, err := fsClient.Collection(collection).Doc(uid).Set(context.Background(), v)
 	return err
 }
+
+// UpdateScore accepts user ID and score and updates DB
+func UpdateScore(uid string, collection string, score float64) error {
+	_, err := fsClient.Collection(collection).Doc(uid).Set(context.Background(), map[string]interface{}{
+		"score": score,
+	}, firestore.MergeAll)
+
+	return err
+}

@@ -42,7 +42,7 @@ func getLanguageURL(url string) string {
 }
 
 func init() {
-	clientID, clientSecret = creds.GetClientCreds("../github.json")
+	clientID, clientSecret = creds.GetClientCreds("./github.json")
 }
 
 // GetScore takes GitHub User ID as input
