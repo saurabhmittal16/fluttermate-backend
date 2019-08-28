@@ -141,6 +141,7 @@ func init() {
 		}
 	*/
 	clientID, clientSecret = creds.GetClientCreds("./github.json")
+	score.Init(clientID, clientSecret)
 }
 
 func main() {

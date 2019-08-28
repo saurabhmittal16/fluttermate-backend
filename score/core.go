@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
-	"github.com/saurabhmittal16/fluttermate/creds"
 )
 
 var clientSecret string
@@ -41,8 +39,9 @@ func getLanguageURL(url string) string {
 	return fmt.Sprintf("%s?client_id=%s&client_secret=%s", url, clientID, clientSecret)
 }
 
-func init() {
-	clientID, clientSecret = creds.GetClientCreds("./github.json")
+// Init is needed to initialise the credentials for the package
+func Init(ClientID string, ClientSecret string) {
+	clientID, clientSecret = ClientID, ClientSecret
 }
 
 // GetScore takes GitHub User ID as input
